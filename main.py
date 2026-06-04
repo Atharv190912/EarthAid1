@@ -421,7 +421,7 @@ st.markdown("""
 # ---------------------- USER AUTH SECTION ------------------------
 if not st.session_state['authentication_status']:
     with st.sidebar:
-        st.image("https://imgur.com/uJlMRu9.png", width=200)  # Replace with your logo or remove
+        st.image("https://imgur.com/uJlMRu9.png", width=200)
         st.title("🌱 EarthAid Login")
         
         mode = st.radio("Choose an option:", ["Login", "Create Account"], horizontal=True)
@@ -530,7 +530,7 @@ if not st.session_state['authentication_status']:
 else:
     # --- Sidebar for logged in users ---
     with st.sidebar:
-        st.image("https://imgur.com/uJlMRu9.png", width=150)  # Replace with your logo or remove
+        st.image("https://imgur.com/uJlMRu9.png", width=150)
         
         # User profile summary
         st.markdown(f"""
@@ -620,7 +620,6 @@ else:
             """, unsafe_allow_html=True)
             
             if not reports_df.empty:
-                # Sort by timestamp if available, otherwise just show the last 3
                 if "timestamp" in reports_df.columns:
                     recent_reports = reports_df.sort_values("timestamp", ascending=False).head(3)
                 else:
@@ -649,7 +648,6 @@ else:
             """, unsafe_allow_html=True)
             
             if not initiatives_df.empty:
-                # Sort by timestamp if available, otherwise just show the last 3
                 if "timestamp" in initiatives_df.columns:
                     recent_initiatives = initiatives_df.sort_values("timestamp", ascending=False).head(3)
                 else:
@@ -686,13 +684,11 @@ else:
         
         with quick_col1:
             if st.button("📝 Report New Issue", use_container_width=True):
-                # Switch to Report tab
                 st.session_state["active_tab"] = 1
                 st.rerun()
                 
         with quick_col2:
             if st.button("🔍 View Global Map", use_container_width=True):
-                # Switch to Map tab
                 st.session_state["active_tab"] = 2
                 st.rerun()
  
@@ -710,7 +706,6 @@ else:
         </div>
         """, unsafe_allow_html=True)
         
-        # Report form with columns for better layout
         col1, col2 = st.columns([2, 1])
         
         with col1:
@@ -765,7 +760,6 @@ else:
                  
                         st.success("✅ Report successfully submitted! You earned 1 LifePoint.")
                         
-                        # Show solution after successful submission
                         st.markdown(f"""
                         <div style="background-color: #e3f2fd; padding: 20px; border-radius: 10px; margin-top: 20px;">
                             <h3 style="color: #1565c0;">💡 Solution for {category}</h3>
@@ -791,7 +785,6 @@ else:
             </div>
             """, unsafe_allow_html=True)
             
-            # Show category stats
             reports_df = load_reports_data()
             if not reports_df.empty and "category" in reports_df.columns:
                 st.markdown("""
@@ -809,6 +802,7 @@ else:
                     </div>
                     """, unsafe_allow_html=True)
  
+    # ---- FIX 1: Map tab with no-token map style + FIX 2: safe lat/lon mean ----
     with tabs[2]:
         st.header("🗺️ Live Earth Map")
         df = load_reports_data()
@@ -818,7 +812,6 @@ else:
             city_names = []
             for _, row in df.iterrows():
                 lat, lon = row['latitude'], row['longitude']
-                # Find matching city
                 city_name = "Unknown Location"
                 for city, city_lat, city_lon in cities:
                     if abs(lat - city_lat) < 0.01 and abs(lon - city_lon) < 0.01:
@@ -827,12 +820,17 @@ else:
                 city_names.append(city_name)
             
             df['city_name'] = city_names
-            
+
+            # FIX 2: Safe center calculation — fallback if lat/lon are all NaN
+            center_lat = df["latitude"].mean() if df["latitude"].notna().any() else 20.0
+            center_lon = df["longitude"].mean() if df["longitude"].notna().any() else 0.0
+
+            # FIX 1: Use CartoDB Positron style — no Mapbox token required
             st.pydeck_chart(pdk.Deck(
-                map_style='mapbox://styles/mapbox/light-v9',
+                map_style='https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
                 initial_view_state=pdk.ViewState(
-                    latitude=df["latitude"].mean(),
-                    longitude=df["longitude"].mean(),
+                    latitude=center_lat,
+                    longitude=center_lon,
                     zoom=2,
                     pitch=50
                 ),
@@ -842,7 +840,7 @@ else:
                         data=df,
                         get_position='[longitude, latitude]',
                         get_color='[200, 30, 0, 160]',
-                        get_radius=10000,
+                        get_radius=200000,   # FIX 3: Better visible radius at global zoom
                     )
                 ]
             ))
@@ -868,7 +866,6 @@ else:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Show images button if images exist
                 if before_img or after_img:
                     if st.button(f"📸 Check Images - {city_name}", key=f"view_img_{idx}"):
                         st.markdown("---")
@@ -947,7 +944,6 @@ else:
             if df.empty:
                 st.info("No initiatives submitted yet. Be the first to start one!")
             else:
-                # Sort by timestamp if available
                 if "timestamp" in df.columns:
                     df = df.sort_values("timestamp", ascending=False)
                 
@@ -956,7 +952,7 @@ else:
                     <div class="initiative-card">
                         <h3 style="color: #2e7d32; margin-top: 0;">🌿 {row['name']}</h3>
                         <p><strong>Description:</strong> {row['description']}</p>
-                       <p><strong>Organizer:</strong> @{row.get('publisher', 'Unknown')}</p>
+                        <p><strong>Organizer:</strong> @{row.get('publisher', 'Unknown')}</p>
                         <p><strong>Contact:</strong> {row['contact']}</p>
                     </div>
                     """, unsafe_allow_html=True)
@@ -968,7 +964,6 @@ else:
                             if st.session_state['username']:
                                 responses = load_responses_data()
                                 
-                                # Check if already joined   
                                 already_joined = False
                                 if not responses.empty:
                                     already_joined = ((responses["initiative"] == row['name']) & 
@@ -997,13 +992,11 @@ else:
         st.header("👤 Your Profile")
         
         if st.session_state['username']:
-            # Load user data
             points_df = load_points_data()
             reports_df = load_reports_data()
             initiatives_df = load_initiatives_data()
             responses_df = load_responses_data()
             
-            # Get user stats
             user_points = 0
             if st.session_state['username'] in points_df["username"].values:
                 user_points = int(points_df[points_df["username"] == st.session_state['username']]["lifepoints"].values[0])
@@ -1020,7 +1013,6 @@ else:
             if not responses_df.empty and "participant" in responses_df.columns:
                 user_joined = len(responses_df[responses_df["participant"] == st.session_state['username']])
             
-            # Profile header
             col_profile1, col_profile2 = st.columns([1, 2])
             
             with col_profile1:
@@ -1050,12 +1042,10 @@ else:
                 with impact_col2:
                     st.metric("Initiatives Joined", user_joined, help="Initiatives you've participated in")
                     
-                    # Calculate rank
                     if not points_df.empty:
                         rank = (points_df["lifepoints"] > user_points).sum() + 1
                         st.metric("Global Rank", f"#{rank}", help="Your position on the leaderboard")
             
-            # Achievement badges
             st.markdown("---")
             st.subheader("🏅 Your Achievements")
             
@@ -1090,7 +1080,6 @@ else:
             else:
                 st.info("Start participating to earn achievements!")
             
-            # Certificate eligibility
             st.markdown("---")
             st.subheader("📜 Certificate of Impact")
             
@@ -1105,12 +1094,9 @@ else:
             else:
                 points_needed = 5 - user_points
                 st.info(f"Earn {points_needed} more LifePoint{'s' if points_needed > 1 else ''} to unlock your Certificate of Impact!")
-                
-                # Progress bar
                 progress = user_points / 5
                 st.progress(progress)
             
-            # Recent activity
             st.markdown("---")
             st.subheader("📅 Your Recent Activity")
             
@@ -1145,7 +1131,6 @@ else:
                             description = init.get('description', 'No description')
                             timestamp = init.get('timestamp', '')
                             
-                            # Count participants
                             participants = 0
                             if not responses_df.empty and "initiative" in responses_df.columns:
                                 participants = len(responses_df[responses_df["initiative"] == name])
@@ -1200,7 +1185,6 @@ else:
         if not points_df.empty:
             leaderboard = points_df.sort_values("lifepoints", ascending=False).reset_index(drop=True)
             
-            # Add medals and ranks
             leaderboard["rank"] = range(1, len(leaderboard) + 1)
             leaderboard["medal"] = ""
             
@@ -1211,7 +1195,6 @@ else:
             if len(leaderboard) > 2:
                 leaderboard.at[2, "medal"] = "🥉"
             
-            # Display top 3 with special styling
             st.subheader("🌟 Top 3 Champions")
             
             top3_cols = st.columns(3)
@@ -1223,7 +1206,6 @@ else:
                     username = user_data["username"]
                     points = int(user_data["lifepoints"])
                     
-                    # Different colors for different ranks
                     colors = ["#FFD700", "#C0C0C0", "#CD7F32"]
                     
                     st.markdown(f"""
@@ -1235,11 +1217,9 @@ else:
                     </div>
                     """, unsafe_allow_html=True)
             
-            # Display full leaderboard
             st.markdown("---")
             st.subheader("📊 Full Leaderboard")
             
-            # Highlight current user
             for idx, row in leaderboard.iterrows():
                 is_current_user = row["username"] == st.session_state['username']
                 
@@ -1260,7 +1240,6 @@ else:
                     </div>
                     """, unsafe_allow_html=True)
             
-            # Leaderboard statistics
             st.markdown("---")
             st.subheader("📈 Leaderboard Stats")
             
