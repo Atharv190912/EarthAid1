@@ -215,7 +215,7 @@ if not st.session_state['authentication_status'] and cookies.get("logged_in") ==
 st.markdown("""
 <style>
     /* Global Styles */
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&Adisplay=swap');
     * {font-family: 'Poppins', sans-serif;}
 
     /* Main app styling */
@@ -711,7 +711,7 @@ else:
         st.markdown("""
         <div class="card" style="margin-top: 30px;">
             <h3>👨‍💻 Created by Atharv Johari</h3>
-            <p>A 12-year-old innovator passionate about environmental change and technology.</p>
+            <p>A youth innovator passionate about environmental change and technology.</p>
             <p>EarthAid is designed to connect young environmental advocates and empower them to make a difference through technology and community action.</p>
         </div>
         """, unsafe_allow_html=True)
