@@ -2,4 +2,5 @@ streamlit
 pandas
 pydeck
 plotly
-Pillow  # For the 'from PIL import Image' import
+Pillow
+streamlit-cookies-manager
