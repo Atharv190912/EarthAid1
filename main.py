@@ -132,24 +132,23 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ---------------- SECURE COOKIE MANAGER (persistent login) ----------------
-# The encryption key must live in Streamlit Secrets (.streamlit/secrets.toml locally,
-# or the "Secrets" panel on Streamlit Community Cloud) as:
-#
-#   COOKIES_PASSWORD = "MYdKJ65oQnOyOgV1VEWYyDKn0K9hhgzY"
-#
-# No hardcoded fallback password is used — if the secret is missing, the app
-# refuses to start rather than silently falling back to a known/insecure key.
-COOKIES_PASSWORD = os.getenv("COOKIES_PASSWORD")
+# ---------------- SECURE COOKIE MANAGER ----------------
+from streamlit_cookies_manager import EncryptedCookieManager
+
+COOKIES_PASSWORD = os.environ.get("COOKIES_PASSWORD", "").strip()
 
 if not COOKIES_PASSWORD:
-    st.error("Missing COOKIES_PASSWORD in environment variables")
+    st.error("Missing COOKIES_PASSWORD environment variable (Render Secrets not loaded yet)")
     st.stop()
 
 cookies = EncryptedCookieManager(
     prefix="earthaid_",
     password=COOKIES_PASSWORD
 )
+
+# IMPORTANT: initialize cookies
+if not cookies.ready():
+    st.stop()
 
 # --- Session State Setup ---
 if "authentication_status" not in st.session_state:
