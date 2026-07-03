@@ -136,7 +136,7 @@ st.set_page_config(
 # The encryption key must live in Streamlit Secrets (.streamlit/secrets.toml locally,
 # or the "Secrets" panel on Streamlit Community Cloud) as:
 #
-#   COOKIES_PASSWORD = "a-long-random-32+char-secret"
+#   COOKIES_PASSWORD = "XzfCuEhcuZ4xzH2gXjsKwr73HteQ3frq"
 #
 # No hardcoded fallback password is used — if the secret is missing, the app
 # refuses to start rather than silently falling back to a known/insecure key.
