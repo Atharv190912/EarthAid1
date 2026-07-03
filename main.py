@@ -140,19 +140,16 @@ st.set_page_config(
 #
 # No hardcoded fallback password is used — if the secret is missing, the app
 # refuses to start rather than silently falling back to a known/insecure key.
-if "COOKIES_PASSWORD" in st.secrets:
-    cookies = EncryptedCookieManager(
-        prefix="earthaid_",
-        password=st.secrets["COOKIES_PASSWORD"]
-    )
-else:
-    st.error("⚠️ Configuration Error: `COOKIES_PASSWORD` not found in Streamlit Secrets. "
-             "Add a strong, random secret to `.streamlit/secrets.toml` (or your Cloud app's "
-             "Secrets settings) before running EarthAid.")
+COOKIES_PASSWORD = os.getenv("COOKIES_PASSWORD")
+
+if not COOKIES_PASSWORD:
+    st.error("Missing COOKIES_PASSWORD in environment variables")
     st.stop()
 
-if not cookies.ready():
-    st.stop()
+cookies = EncryptedCookieManager(
+    prefix="earthaid_",
+    password=COOKIES_PASSWORD
+)
 
 # --- Session State Setup ---
 if "authentication_status" not in st.session_state:
