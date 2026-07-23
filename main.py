@@ -10,13 +10,11 @@ from PIL import Image
 import io
 import random
 from streamlit_cookies_manager import EncryptedCookieManager
+import firebase_admin
+from firebase_admin import credentials, db
+import json
 
 # --- Constants ---
-REPORTS_FILE = "reports.csv"
-INITIATIVES_FILE = "initiatives.csv"
-POINTS_FILE = "points.csv"
-RESPONSES_FILE = "initiative_responses.csv"
-USERS_FILE = "users.csv"
 IMAGE_DIR = "images"
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
@@ -60,26 +58,41 @@ cities = [
     ("Beijing, China", 39.9042, 116.4074)
 ]
 
-# ---------------- SAFE CSV LOADER ----------------
-def safe_read_csv(file, columns):
-    """Robust CSV loader: creates file with headers if missing, and
-    returns an empty (but correctly-columned) DataFrame if the file
-    exists but is empty or corrupted, instead of crashing."""
-    if os.path.exists(file):
-        try:
-            if os.path.getsize(file) == 0:
-                return pd.DataFrame(columns=columns)
-            return pd.read_csv(file)
-        except Exception:
-            return pd.DataFrame(columns=columns)
+# ---------------- FIREBASE SETUP ----------------
+if not firebase_admin._apps:
+    if "firebase" in st.secrets:
+        creds_dict = dict(st.secrets["firebase"])
+        cred = credentials.Certificate(creds_dict)
+        firebase_admin.initialize_app(cred, {
+            'databaseURL': st.secrets["firebase"].get("databaseURL", "https://earthaid-default-rtdb.firebaseio.com/")
+        })
     else:
-        df = pd.DataFrame(columns=columns)
-        df.to_csv(file, index=False)
-        return df
+        st.error("Firebase credentials missing from st.secrets!")
+
+def safe_read_firebase(ref_path, columns):
+    try:
+        data = db.reference(ref_path).get()
+    except Exception as e:
+        print("Firebase read error:", e)
+        data = None
+        
+    if data:
+        if isinstance(data, dict):
+            rows = list(data.values())
+        elif isinstance(data, list):
+            rows = [item for item in data if item is not None]
+        else:
+            rows = []
+        df = pd.DataFrame(rows)
+        for col in columns:
+            if col not in df.columns:
+                df[col] = pd.NA
+        return df[columns]
+    return pd.DataFrame(columns=columns)
 
 # --- Load Credentials ---
 def load_credentials():
-    users_df = safe_read_csv(USERS_FILE, ["username", "name", "password"])
+    users_df = safe_read_firebase("users", ["username", "name", "password"])
     credentials = {
         "usernames": {
             row["username"]: {
@@ -96,7 +109,7 @@ users_df, credentials = load_credentials()
 # --- Save Credentials ---
 def save_credentials(df):
     try:
-        df.to_csv(USERS_FILE, index=False)
+        db.reference("users").set(df.to_dict(orient="records"))
     except Exception as e:
         st.error(f"Error saving credentials: {e}")
         print(f"Error saving credentials: {e}")
@@ -166,26 +179,26 @@ if "active_tab" not in st.session_state:
 if "selected_initiative" not in st.session_state:
     st.session_state['selected_initiative'] = None
 
-# --- Helper functions for reporting data (crash-safe on empty CSVs) ---
+# --- Helper functions for reporting data (Firebase) ---
 def load_reports_data():
     """Load and prepare reports data"""
-    return safe_read_csv(REPORTS_FILE,
+    return safe_read_firebase("reports",
         ["description", "category", "latitude", "longitude", "username", "before", "after", "timestamp"]
     )
 
 def load_initiatives_data():
     """Load and prepare initiatives data"""
-    return safe_read_csv(INITIATIVES_FILE,
+    return safe_read_firebase("initiatives",
         ["name", "description", "contact", "publisher", "timestamp"]
     )
 
 def load_points_data():
     """Load points data"""
-    return safe_read_csv(POINTS_FILE, ["username", "lifepoints"])
+    return safe_read_firebase("points", ["username", "lifepoints"])
 
 def load_responses_data():
     """Load initiative responses data"""
-    return safe_read_csv(RESPONSES_FILE, ["initiative", "participant", "contact", "timestamp"])
+    return safe_read_firebase("responses", ["initiative", "participant", "contact", "timestamp"])
 
 def award_points(username, points=1):
     """Award points to a user"""
@@ -194,7 +207,7 @@ def award_points(username, points=1):
         points_df.loc[points_df["username"] == username, "lifepoints"] += points
     else:
         points_df = pd.concat([points_df, pd.DataFrame([[username, points]], columns=["username", "lifepoints"])], ignore_index=True)
-    points_df.to_csv(POINTS_FILE, index=False)
+    db.reference("points").set(points_df.to_dict(orient="records"))
     return points_df
 
 # Auto-login from cookie if a valid session cookie exists.
@@ -463,7 +476,7 @@ if not st.session_state['authentication_status']:
                         new_user = pd.DataFrame([[new_username, new_name, new_password]],
                                                 columns=["username", "name", "password"])
                         users_df = pd.concat([users_df, new_user], ignore_index=True)
-                        users_df.to_csv(USERS_FILE, index=False)
+                        save_credentials(users_df)
                         st.success("✅ Account created! You can now log in.")
                         st.session_state['show_signup'] = False
                     else:
@@ -788,7 +801,7 @@ else:
                             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         }
                         df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-                        df.to_csv(REPORTS_FILE, index=False)
+                        db.reference("reports").set(df.to_dict(orient="records"))
 
                         award_points(st.session_state['username'], 1)
 
@@ -971,7 +984,7 @@ else:
                             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         }
                         df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-                        df.to_csv(INITIATIVES_FILE, index=False)
+                        db.reference("initiatives").set(df.to_dict(orient="records"))
 
                         award_points(st.session_state['username'], 1)
 
@@ -1027,7 +1040,7 @@ else:
                                         "contact": row['contact'],
                                         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                     }])], ignore_index=True)
-                                    responses.to_csv(RESPONSES_FILE, index=False)
+                                    db.reference("responses").set(responses.to_dict(orient="records"))
 
                                     award_points(st.session_state['username'], 1)
 

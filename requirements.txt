@@ -4,3 +4,4 @@ pydeck
 plotly
 Pillow
 streamlit-cookies-manager
+firebase-admin
