@@ -563,7 +563,7 @@ if not st.session_state['authentication_status']:
     st.markdown("""
     <div style="margin-top: 50px; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
         <h2>👨‍💻 Created by Atharv Johari</h2>
-        <p>A 12-year-old innovator passionate about environmental change and technology.</p>
+        <p>A 13-year-old innovator passionate about environmental change and technology.</p>
         <p>EarthAid is designed to connect young environmental advocates and empower them to make a difference.</p>
     </div>
     """, unsafe_allow_html=True)
