@@ -585,7 +585,8 @@ else:
         points_df = load_points_data()
         user_points = 0
         if st.session_state['username'] in points_df["username"].values:
-            user_points = int(points_df[points_df["username"] == st.session_state['username']]["lifepoints"])
+            series = points_df.loc[points_df["username"] == st.session_state['username'], "lifepoints"]
+            user_points = int(series.iloc[0]) if not series.empty else 0
 
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9); padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px;">
